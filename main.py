@@ -1,8 +1,6 @@
 import streamlit as st
-import os
 import random
 from pathlib import Path
-import traceback
 
 # ---------- CONFIGURATION ----------
 st.set_page_config(
@@ -10,22 +8,6 @@ st.set_page_config(
     layout="centered",
     page_icon="🧒"
 )
-
-# ---------- BACKGROUND IMAGE ----------
-def set_background_image(image_path):
-    st.markdown(
-        f"""
-        <style>
-        .stApp {{
-            background: url("{image_path}");
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
 
 # ---------- CONSTANTS ----------
 IMAGE_PATH = "assets/images"
@@ -39,6 +21,7 @@ COLORS = {
     "purple": "#800080"
 }
 
+# ---------- DATA ----------
 LETTERS = [chr(i) for i in range(97, 123)]  # a-z
 WORDS = {
     "a": "apple", "b": "ball", "c": "cat", "d": "dog", "e": "elephant",
@@ -66,23 +49,38 @@ def reset_game_state():
     st.session_state.submitted = False
     st.session_state.selected_option = None
     st.session_state.options = []
-    setup_color_game()
 
-def setup_color_game():
-    current_color = random.choice(list(COLORS.keys()))
-    others = [c for c in COLORS.keys() if c != current_color]
-    options = random.sample(others, 2) + [current_color]
+    correct_color = random.choice(list(COLORS.keys()))
+    other_colors = [c for c in COLORS.keys() if c != correct_color]
+    options = random.sample(other_colors, 2) + [correct_color]
     random.shuffle(options)
+
     st.session_state.color_game = {
         "score": 0,
-        "current_color": current_color,
+        "current_color": correct_color,
         "options": options
     }
+    st.session_state.color_selected = None
+    st.session_state.color_feedback = ""
+
+def set_background_image(image_path):
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background: url("{image_path}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------- GAME COMPONENTS ----------
 def letter_learning_page():
     st.title("🌟 ABC Fun Time!")
-
     cols = st.columns(4)
     for idx, letter in enumerate(LETTERS):
         with cols[idx % 4]:
@@ -98,7 +96,6 @@ def letter_learning_page():
 
 def image_matching_game():
     st.title("🖼️ Picture Match Game")
-
     progress = (st.session_state.quiz_index + 1) / len(LETTERS)
     st.progress(progress)
     st.caption(f"Match {st.session_state.quiz_index + 1} of {len(LETTERS)}")
@@ -118,13 +115,10 @@ def image_matching_game():
         random.shuffle(st.session_state.options)
 
     cols = st.columns(3)
-    selected = None
-
     for idx, option in enumerate(st.session_state.options):
         with cols[idx % 3]:
             if img_path := load_asset("image", option):
                 if st.button("", key=f"opt_{idx}"):
-                    selected = option
                     st.session_state.selected_option = option
                 st.image(img_path, use_container_width=True)
                 st.caption(option.capitalize())
@@ -159,6 +153,11 @@ def next_question():
 def color_recognition_game():
     st.title("🎨 Color Finder")
 
+    if "color_selected" not in st.session_state:
+        st.session_state.color_selected = None
+    if "color_feedback" not in st.session_state:
+        st.session_state.color_feedback = ""
+
     color = st.session_state.color_game['current_color']
     st.markdown(f"## Find the color: {color.capitalize()}")
 
@@ -166,28 +165,39 @@ def color_recognition_game():
     for idx, option in enumerate(st.session_state.color_game['options']):
         with cols[idx % 3]:
             if st.button("", key=f"color_{option}"):
+                st.session_state.color_selected = option
                 if option == color:
                     st.session_state.color_game['score'] += 1
-                    st.success("Correct! 🎉")
-                    st.balloons()
+                    st.session_state.color_feedback = "✅ Correct! 🎉"
                 else:
-                    st.error(f"Oops! That's {option.capitalize()}")
-
-                # Setup next question
-                new_color = random.choice(list(COLORS.keys()))
-                other_colors = [c for c in COLORS.keys() if c != new_color]
-                new_options = random.sample(other_colors, 2) + [new_color]
-                random.shuffle(new_options)
-
-                st.session_state.color_game['current_color'] = new_color
-                st.session_state.color_game['options'] = new_options
-                st.rerun()
+                    st.session_state.color_feedback = f"❌ Oops! That's {option.capitalize()}."
 
             st.markdown(
                 f"""<div style='background-color:{COLORS[option]}; 
                     height:100px; border-radius:10px;'></div>""",
                 unsafe_allow_html=True
             )
+
+    if st.session_state.color_selected:
+        if "Correct" in st.session_state.color_feedback:
+            st.success(st.session_state.color_feedback)
+            st.balloons()
+        else:
+            st.error(st.session_state.color_feedback)
+
+        if st.button("➡️ Next Color"):
+            st.session_state.color_selected = None
+            st.session_state.color_feedback = ""
+
+            next_color = random.choice(list(COLORS.keys()))
+            other_colors = [c for c in COLORS.keys() if c != next_color]
+            new_options = random.sample(other_colors, 2) + [next_color]
+            random.shuffle(new_options)
+
+            st.session_state.color_game['current_color'] = next_color
+            st.session_state.color_game['options'] = new_options
+
+            st.rerun()
 
     st.markdown(f"**Score: {st.session_state.color_game['score']}**")
 
@@ -198,7 +208,8 @@ def main():
     if "color_game" not in st.session_state:
         reset_game_state()
 
-    set_background_image("assets/backgrounds/background.jpg")
+    # Set background image here
+    set_background_image("assets/images/background.jpg")  # Provide the correct path to your image
 
     with st.sidebar:
         st.title("🎮 Learning Fun")
@@ -221,7 +232,6 @@ def main():
             image_matching_game()
         elif st.session_state.page == "Color Finder":
             color_recognition_game()
-
     except Exception:
         st.error("Oops! Something went wrong.")
         if st.button("Click to restart"):
