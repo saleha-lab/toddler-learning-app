@@ -6,25 +6,21 @@ import traceback
 
 # ---------- CONFIGURATION ----------
 st.set_page_config(
-    page_title="Toddler Learning Fun", 
+    page_title="Toddler Learning Fun",
     layout="centered",
     page_icon="🧒"
 )
 
-# ---------- BACKGROUND HANDLER ----------
-def set_background_for_page(page_name):
-    backgrounds = {
-        "Alphabet Learning": "#F9F3DF",  # soft yellow
-        "Picture Match": "#E0F7FA",     # light cyan
-        "Color Finder": "#FCE4EC"       # soft pink
-    }
-    color = backgrounds.get(page_name, "#FFFFFF")
+# ---------- BACKGROUND IMAGE ----------
+def set_background_image(image_path):
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-color: {color};
+            background: url("{image_path}");
             background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
         }}
         </style>
         """,
@@ -202,7 +198,7 @@ def main():
     if "color_game" not in st.session_state:
         reset_game_state()
 
-    set_background_for_page(st.session_state.page)
+    set_background_image("assets/backgrounds/background.jpg")
 
     with st.sidebar:
         st.title("🎮 Learning Fun")
